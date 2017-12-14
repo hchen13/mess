@@ -28,6 +28,7 @@ class Item:
 
     def __init__(self, *args, **kwargs):
         self.potential_matches = []
+        self.scanned = False
         for key in kwargs:
             self.__setattr__(key, kwargs[key])
 
@@ -71,6 +72,7 @@ class Item:
 
         if check_similarity(similarities, .7):
             self.serial = product.serial
+            self.scanned = True
         elif average >= .5:
             self.potential_matches.append(product)
 
@@ -133,9 +135,9 @@ class Sales(Item):
     REVERSE_HEADERS = dict(zip(KEY_HEADERS.values(), KEY_HEADERS.keys()))
     VALIDATE_FIELDS = ['client', 'name', 'amount', 'total_price']
 
-    # client, name, dose = None, None, None
-    # manufacturer, amount, total_price = None, None, None
-    # serial, year, month = None, None, None
+    client, name, dose = None, None, None
+    manufacturer, amount, total_price = None, None, None
+    serial, year, month = None, None, None
 
     def __repr__(self):
         return "<销售 商品={} 客户={} 数量={} 总金额={}{}>".format(
