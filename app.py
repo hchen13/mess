@@ -95,12 +95,7 @@ if __name__ == '__main__':
         purchase_list = []
         for i, (year, month, sheet) in enumerate(purchase_sheets):
             purchase_list += sheet.items
-        # save_data(purchase_list, "purchase_list.pickle")
-
-    else:
-        for item in purchase_list:
-            if not hasattr(item, 'potential_matches'):
-                item.potential_matches = []
+        save_data(purchase_list, "purchase_list.pickle")
 
     # ==============生成系统编码================
     print('开始对应采购商品系统编码...\n')
@@ -126,6 +121,8 @@ if __name__ == '__main__':
                 break
         if not item.has_serial():
             no_matches += 1
+
+        item.scanned = True
 
     print()
     print(count)

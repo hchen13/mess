@@ -47,6 +47,8 @@ class Item:
         return self.serial is not None
 
     def processed(self):
+        if self.scanned == True:
+            return True
         return self.has_serial() or len(self.potential_matches) > 0
 
     def match_product(self, product):
