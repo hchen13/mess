@@ -113,4 +113,4 @@ if __name__ == '__main__':
     print(count)
 
     print("对应完成, 共有{}条数据 ({}%) 未找到系统编码".format(
-        no_matches, no_matches / num_purchases * 100))
+        no_matches, no_matches / num_sales * 100))
