@@ -52,6 +52,11 @@ class Item:
             return True
         return self.has_serial() or len(self.potential_matches) > 0
 
+    def normalize_product_info(self):
+        self.name = "" if self.name is None else self.name
+        self.dose = "" if self.dose is None else self.dose
+        self.manufacturer = "" if self.manufacturer is None else self.manufacturer
+
     def match_product(self, product):
 
         def get_similarity(a, b):
@@ -68,6 +73,10 @@ class Item:
         similarities[0] = get_similarity(self.name, product.name)
         similarities[1] = get_similarity(self.dose, product.dose)
         similarities[2] = get_similarity(self.manufacturer, product.manufacturer)
+        if self.dose is None:
+            self.dose = ""
+        if product.dose is None:
+            product.dose = ""
         this = self.name + str(self.dose) + self.manufacturer
         pd = product.name + str(product.dose) + product.manufacturer
         overall = get_similarity(this, pd)
@@ -75,7 +84,10 @@ class Item:
         if check_similarity(similarities, .7):
             self.serial = product.serial
             self.scanned = True
-        elif overall >= .6:
+        elif overall >= .8:
+            self.serial = product.serial
+            self.scanned = True
+        elif overall >= .5:
             self.potential_matches.append(product)
         else:
             return overall

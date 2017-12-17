@@ -108,8 +108,10 @@ def match_sales(auto_save=False):
         if auto_save and i > 0 and i % 500 == 0:
             save_data(sales_list, SALES_FILE)
 
-        if item.has_serial() or len(item.potential_matches):
+        if item.has_serial():  # or len(item.potential_matches):
             continue
+
+        ite.potential_matches = []
 
         best_match, best_similarity = None, 0
         for product in products:
@@ -124,7 +126,18 @@ def match_sales(auto_save=False):
     save_data(sales_list, SALES_FILE)
 
 
+def preprocess():
+    p, s = load_ops_list()
+    for i in p:
+        i.normalize_product_info()
+    for i in s:
+        i.normalize_product_info()
+    save_data(p, PURCHASE_FILE)
+    save_data(s, SALES_FILE)
+
+
 if __name__ == "__main__":
-    match_purchases()
-    match_sales()
+    preprocess()
+    match_purchases(auto_save=True)
+    match_sales(auto_save=True)
     handle_matches()
