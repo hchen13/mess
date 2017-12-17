@@ -48,7 +48,7 @@ class Item:
         return self.serial is not None
 
     def processed(self):
-        if self.scanned == True:
+        if self.scanned:
             return True
         return self.has_serial() or len(self.potential_matches) > 0
 
@@ -68,9 +68,8 @@ class Item:
         similarities[0] = get_similarity(self.name, product.name)
         similarities[1] = get_similarity(self.dose, product.dose)
         similarities[2] = get_similarity(self.manufacturer, product.manufacturer)
-        average = np.average(similarities)
-        this = self.name + self.dose + self.manufacturer
-        pd = product.name + product.dose + product.manufacturer
+        this = self.name + str(self.dose) + self.manufacturer
+        pd = product.name + str(product.dose) + product.manufacturer
         overall = get_similarity(this, pd)
 
         if check_similarity(similarities, .7):
