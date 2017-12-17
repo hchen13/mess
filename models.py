@@ -69,17 +69,18 @@ class Item:
         similarities[1] = get_similarity(self.dose, product.dose)
         similarities[2] = get_similarity(self.manufacturer, product.manufacturer)
         average = np.average(similarities)
+        this = self.name + self.dose + self.manufacturer
+        pd = product.name + product.dose + product.manufacturer
+        overall = get_similarity(this, pd)
 
         if check_similarity(similarities, .7):
             self.serial = product.serial
             self.scanned = True
-        elif average >= .5:
+        elif overall >= .6:
             self.potential_matches.append(product)
+        else:
+            return overall
 
-        # print(self.name, product.name, similarities[0])
-        # print(self.dose, product.dose, similarities[1])
-        # print(self.manufacturer, product.manufacturer, similarities[2])
-        # print(average)
 
 class Product(Item):
     KEY_HEADERS = {
@@ -147,6 +148,9 @@ class Sales(Item):
             self.total_price,
             " 时间={}.{}".format(self.year, self.month) if self.year else ""
         )
+
+    def show_product(self):
+        print("{} {} {}".format(self.name, self.dose, self.manufacturer))
 
 
 class SourceFile:
