@@ -41,6 +41,9 @@ def handle_matches():
     purchase_error_file = os.path.join(ERROR_DIR, '采购数据整理建议.txt')
     sales_error_file = os.path.join(ERROR_DIR, '销售数据整理建议.txt')
 
+    os.remove(purchase_error_file)
+    os.remove(sales_error_file)
+
     with open(purchase_error_file, 'w') as fout:
         iter, tn = 0, len(purchase_list)
         show_progress(0, tn)
