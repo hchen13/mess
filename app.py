@@ -79,8 +79,10 @@ def match_purchases(auto_save=False):
         if auto_save and i > 0 and i % 500 == 0:
             save_data(purchase_list, PURCHASE_FILE)
 
-        if item.has_serial() or len(item.potential_matches):
+        if item.has_serial():  # or len(item.potential_matches):
             continue
+
+        item.potential_matches = []
 
         best_match, best_similarity = None, 0
         for product in products:
@@ -111,7 +113,7 @@ def match_sales(auto_save=False):
         if item.has_serial():  # or len(item.potential_matches):
             continue
 
-        ite.potential_matches = []
+        item.potential_matches = []
 
         best_match, best_similarity = None, 0
         for product in products:
