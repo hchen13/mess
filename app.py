@@ -92,7 +92,6 @@ def match_purchases(auto_save=False):
                 best_match = product
         if not len(item.potential_matches):
             item.potential_matches.append(best_match)
-            print(item.potential_matches)
     save_data(purchase_list, PURCHASE_FILE)
 
 
