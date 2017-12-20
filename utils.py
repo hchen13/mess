@@ -14,7 +14,10 @@ def file_exists(file_path):
 def init():
 
     print("清理所有错误日志...")
-    shutil.rmtree(os.path.join(ERROR_DIR))
+    try:
+        shutil.rmtree(os.path.join(ERROR_DIR))
+    except FileNotFoundError:
+        pass
     os.mkdir(ERROR_DIR)
     print("清理完成.\n")
 
