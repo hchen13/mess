@@ -1,5 +1,7 @@
 import re
 import pickle
+import shutil
+
 from settings import *
 
 from models import SourceFile, Purchase, Sales, Product
@@ -7,6 +9,14 @@ from models import SourceFile, Purchase, Sales, Product
 
 def file_exists(file_path):
     return os.path.exists(file_path)
+
+
+def init():
+
+    print("清理所有错误日志...")
+    shutil.rmtree(os.path.join(ERROR_DIR))
+    os.mkdir(ERROR_DIR)
+    print("清理完成.\n")
 
 
 def save_data(data, file_name, silent=True):
@@ -49,7 +59,7 @@ def load_products(reload=False):
 def _preprocess_sheets():
 
     def dir_match(path):
-        match = re.match(r'.*(?P<new>201\d-\d)', path)
+        match = re.match(r'.*(?P<new>201\d)', path)
         if not match:
             return False
         return True

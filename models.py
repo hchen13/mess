@@ -29,6 +29,7 @@ class Item:
     def __init__(self, *args, **kwargs):
         self.potential_matches = []
         self.scanned = False
+        self.unlikely = False
         for key in kwargs:
             self.__setattr__(key, kwargs[key])
 
@@ -56,6 +57,9 @@ class Item:
         self.name = "" if self.name is None else self.name
         self.dose = "" if self.dose is None else self.dose
         self.manufacturer = "" if self.manufacturer is None else self.manufacturer
+        self.name = self.name.lower()
+        self.dose = str(self.dose).lower()
+        self.manufacturer = str(self.manufacturer).lower()
 
     def match_product(self, product):
 
@@ -90,6 +94,7 @@ class Item:
         elif overall >= .5:
             self.potential_matches.append(product)
         else:
+            self.unlikely = True
             return overall
 
 

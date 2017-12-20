@@ -2,6 +2,38 @@ from models import show_progress
 from utils import *
 
 
+def display_stats():
+    purchase_list, sales_list = load_ops_list()
+    print("=============数据统计=============\n")
+    count_has_serial, count_has_potential = 0, 0
+    for i in purchase_list:
+        if i.has_serial():
+            count_has_serial += 1
+            continue
+        if len(i.potential_matches) > 1:
+            count_has_potential += 1
+    print("采购数据共{}项".format(len(purchase_list)))
+    print("成功匹配: {}\t\t有候选: {}\t\t几乎无匹配: {}\n".format(
+        count_has_serial,
+        count_has_potential,
+        len(purchase_list) - count_has_serial - count_has_potential
+    ))
+
+    count_has_serial, count_has_potential = 0, 0
+    for i in sales_list:
+        if i.has_serial():
+            count_has_serial += 1
+            continue
+        if len(i.potential_matches) > 1:
+            count_has_potential += 1
+    print("销售数据共{}项".format(len(sales_list)))
+    print("成功匹配: {}\t\t有候选: {}\t\t几乎无匹配: {}\n".format(
+        count_has_serial,
+        count_has_potential,
+        len(sales_list) - count_has_serial - count_has_potential
+    ))
+
+
 def handle_matches():
 
     def report_no_match(item):
@@ -36,34 +68,36 @@ def handle_matches():
 
         return title + info
 
+    def write_errors(ops_list, file_prefix):
+        count, buff, num = 0, [], 1
+        for i in ops_list:
+            if i.has_serial():
+                continue
+            report = report_no_match(i)
+            buff.append(report)
+            count += 1
+            if count >= 500:
+                file_name = "{}{}.txt".format(file_prefix, num)
+                with open(file_name, 'w') as fout:
+                    for line in buff:
+                        fout.write(line)
+                count = 0
+                buff = []
+                num += 1
+        file_name = "{}{}.txt".format(file_prefix, num)
+        with open(file_name, 'w') as fout:
+            for line in buff:
+                fout.write(line)
+
     purchase_list, sales_list = load_ops_list()
 
-    purchase_error_file = os.path.join(ERROR_DIR, '采购数据整理建议.txt')
-    sales_error_file = os.path.join(ERROR_DIR, '销售数据整理建议.txt')
+    init()
 
-    os.remove(purchase_error_file)
-    os.remove(sales_error_file)
+    purchase_error_file = os.path.join(ERROR_DIR, '采购数据整理建议')
+    sales_error_file = os.path.join(ERROR_DIR, '销售数据整理建议')
 
-    with open(purchase_error_file, 'w') as fout:
-        iter, tn = 0, len(purchase_list)
-        show_progress(0, tn)
-        for i in purchase_list:
-            report = report_no_match(i)
-            fout.write(report)
-            iter += 1
-            if not (iter % 50):
-                show_progress(iter, tn)
-
-    with open(sales_error_file, 'w') as fout:
-
-        iter, tn = 0, len(sales_list)
-        show_progress(0, tn)
-        for i in sales_list:
-            report = report_no_match(i)
-            fout.write(report)
-            iter += 1
-            if not (iter % 50):
-                show_progress(iter, tn)
+    write_errors(purchase_list, purchase_error_file)
+    write_errors(sales_list, sales_error_file)
 
 
 def match_purchases(auto_save=False):
@@ -129,7 +163,7 @@ def match_sales(auto_save=False):
 
 
 def preprocess():
-    p, s = load_ops_list()
+    p, s = load_ops_list(reload=True)
     for i in p:
         i.normalize_product_info()
     for i in s:
@@ -139,7 +173,9 @@ def preprocess():
 
 
 if __name__ == "__main__":
+    init()
     preprocess()
     match_purchases(auto_save=True)
     match_sales(auto_save=True)
     handle_matches()
+    display_stats()
