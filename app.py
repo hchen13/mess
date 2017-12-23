@@ -175,7 +175,7 @@ def preprocess():
 if __name__ == "__main__":
     init()
     preprocess()
-    match_purchases(auto_save=True)
-    match_sales(auto_save=True)
+    match_purchases()
+    match_sales()
     handle_matches()
     display_stats()

@@ -1,6 +1,7 @@
 import re
 import pickle
 import shutil
+from difflib import SequenceMatcher
 
 from settings import *
 
@@ -165,6 +166,12 @@ def _generate_ops_list(target='both'):
         print("模型生成完成!\n")
 
     return purchase_list, sales_list
+
+
+def get_similary(op1, op2):
+    repr1 = op1.name + str(op1.dose) + str(op1.manufacturer)
+    repr2 = op2.name + str(op2.dose) + str(op2.manufacturer)
+    return SequenceMatcher(None, repr1, repr2).ratio()
 
 
 if __name__ == '__main__':
