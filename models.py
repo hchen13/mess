@@ -41,6 +41,10 @@ class Item:
             if not getattr(self, field):
                 valid = False
                 self.errors[self.REVERSE_HEADERS[field]] = '取值为空'
+            value = getattr(self, field)
+            if field == 'vendor' and value == '42':
+                valid = False
+                self.errors[self.REVERSE_HEADERS[field]] = '错误值: error 42'
         return valid
 
     def is_valid(self):
@@ -138,7 +142,11 @@ class Purchase(Item):
     year, month = None, None
     price, unit_price = None, None
 
-    def __repr__(self):
+    @property
+    def time(self):
+        return "{}.{:02}".format(self.year, int(self.month))
+
+def __repr__(self):
         return "<采购 商品={} 供应商={} 数量={}{}>".format(
             self.serial if self.serial else self.name,
             self.vendor,
@@ -221,7 +229,8 @@ class SourceFile:
             if self.year and self.month:
                 fields = {
                     'year': self.year,
-                    'month': self.month
+                    'month': self.month,
+                    'row': i
                 }
             else:
                 fields = {}
