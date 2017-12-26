@@ -1,3 +1,4 @@
+from openpyxl import Workbook
 from models import show_progress
 from utils import *
 
@@ -36,58 +37,22 @@ def display_stats():
 
 def handle_matches():
 
-    def report_no_match(item):
-        item_class = item.__class__
-
-        title_pattern = "{year}年{month}月{type}数据 " \
-                        "{src} [品名] {name} [规格] {dose} [生产商] {manu}\n"
-        params = {
-            "year": item.year,
-            "month": item.month,
-            "name": item.name,
-            "dose": item.dose,
-            "manu": item.manufacturer
-        }
-
-        if item_class is Purchase:
-            item_type = "采购"
-            src_pattern = "[供应商] {}".format(item.vendor)
-        else:
-            item_type = "销售"
-            src_pattern = "[商品去向] {}".format(item.client)
-        params['type'] = item_type
-        params['src'] = src_pattern
-        title = title_pattern.format(**params)
-
-        if not len(item.potential_matches):
-            info = "\t该数据没找到相似商品\n"
-            return title + info
-        info = ""
-        for p in item.potential_matches:
-            info += '\t' + str(p) + '\n'
-
-        return title + info
-
-    def write_errors(ops_list, file_prefix):
+    def write_errors(ops_list, error_type, file_prefix):
         count, buff, num = 0, [], 1
         for i in ops_list:
             if i.has_serial():
                 continue
-            report = report_no_match(i)
-            buff.append(report)
+            buff.append(i)
             count += 1
             if count >= 500:
-                file_name = "{}{}.txt".format(file_prefix, num)
-                with open(file_name, 'w') as fout:
-                    for line in buff:
-                        fout.write(line)
+                file_name = "{}{}.xlsx".format(file_prefix, num)
+                write_match_errors(buff, file_name)
                 count = 0
                 buff = []
                 num += 1
-        file_name = "{}{}.txt".format(file_prefix, num)
-        with open(file_name, 'w') as fout:
-            for line in buff:
-                fout.write(line)
+
+        file_name = "{}{}.xlsx".format(file_prefix, num)
+        write_match_errors(buff, error_type, file_name)
 
     purchase_list, sales_list = load_ops_list()
 
@@ -96,8 +61,8 @@ def handle_matches():
     purchase_error_file = os.path.join(ERROR_DIR, '采购数据整理建议')
     sales_error_file = os.path.join(ERROR_DIR, '销售数据整理建议')
 
-    write_errors(purchase_list, purchase_error_file)
-    write_errors(sales_list, sales_error_file)
+    write_errors(purchase_list, '采购', purchase_error_file)
+    write_errors(sales_list, '销售', sales_error_file)
 
 
 def match_purchases(auto_save=False):

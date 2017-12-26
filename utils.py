@@ -3,6 +3,10 @@ import pickle
 import shutil
 from difflib import SequenceMatcher
 
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Border, Color, Side, NamedStyle
+from copy import copy
+
 from settings import *
 
 from models import SourceFile, Purchase, Sales, Product
@@ -168,11 +172,80 @@ def _generate_ops_list(target='both'):
     return purchase_list, sales_list
 
 
-def get_similary(op1, op2):
-    repr1 = op1.name + str(op1.dose) + str(op1.manufacturer)
-    repr2 = op2.name + str(op2.dose) + str(op2.manufacturer)
-    return SequenceMatcher(None, repr1, repr2).ratio()
+def get_string_similarity(s1, s2):
+    return SequenceMatcher(None, s1, s2).ratio()
 
+
+header_style = NamedStyle(
+    name='header',
+    font=Font(color="ffffff"),
+    fill=PatternFill(patternType='solid', fgColor='38761d')
+)
+error_style = NamedStyle(
+    name='error',
+    font=Font(color='c93e14', bold=True)
+)
+purchase_headers = ["类型", "日期", "供应商", "系统编码", "品名", "规格", "生产企业"]
+sales_headers = ["类型", "日期", "商品去向", "系统编码", "品名", "规格", "生产企业"]
+
+
+def get_attribute(item, data_type, attribute):
+    if attribute in item.KEY_HEADERS:
+        key = item.KEY_HEADERS[attribute]
+        return getattr(item, key)
+    else:
+        if attribute == '类型':
+            return "错误项" if data_type != '商品' else "建议"
+        if attribute == '日期' and data_type != '商品':
+            return "{}.{}".format(item.year, item.month)
+        return ""
+
+
+def write_headers(sheet, headers):
+    for col in range(len(headers)):
+        cell = sheet.cell(row=1, column=col + 1)
+        cell.value = headers[col]
+        cell.style = header_style
+
+
+def write_data_row(item, data_type, sheet, row):
+    if data_type == '采购':
+        headers = purchase_headers
+    else:
+        headers = sales_headers
+
+    for col in range(len(headers)):
+        value = get_attribute(item, data_type, headers[col])
+        cell = sheet.cell(row=row, column=col + 1)
+        cell.value = value
+        if data_type != '商品':
+            cell.style = error_style
+
+
+def write_match_errors(items, error_type, filename):
+    book = Workbook()
+    sheet = book.active
+    if error_type == '采购':
+        write_headers(sheet, purchase_headers)
+    else:
+        write_headers(sheet, sales_headers)
+    current_row = 2
+    for item in items:
+        write_data_row(item, error_type, sheet, current_row)
+        current_row += 1
+
+        def get_similarity(sug):
+            a = item.get_product_info
+            b = sug.get_product_info
+            return get_string_similarity(a, b)
+        item.potential_matches.sort(key=get_similarity, reverse=True)
+
+        for suggestion in item.potential_matches[:10]:
+            write_data_row(suggestion, '商品', sheet, current_row)
+            current_row += 1
+
+    path = os.path.join(ERROR_DIR, filename)
+    book.save(path)
 
 if __name__ == '__main__':
     pass

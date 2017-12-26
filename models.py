@@ -31,7 +31,8 @@ class Item:
         self.scanned = False
         self.unlikely = False
         for key in kwargs:
-            self.__setattr__(key, kwargs[key])
+            value = str(kwargs[key]).lower()
+            self.__setattr__(key, value)
 
     def validate(self):
         self.errors = {}
@@ -60,6 +61,10 @@ class Item:
         self.name = self.name.lower()
         self.dose = str(self.dose).lower()
         self.manufacturer = str(self.manufacturer).lower()
+
+    @property
+    def get_product_info(self):
+        return "{}{}{}".format(self.name, self.dose, self.manufacturer).lower()
 
     def match_product(self, product):
 
@@ -122,6 +127,8 @@ class Purchase(Item):
         '生产企业': 'manufacturer',
         '数量': 'amount',
         '供货商': 'vendor',
+        '购进金额': 'price',
+        '购进单价': 'unit_price'
     }
     REVERSE_HEADERS = dict(zip(KEY_HEADERS.values(), KEY_HEADERS.keys()))
     VALIDATE_FIELDS = ['vendor', 'name', 'amount']
@@ -129,6 +136,7 @@ class Purchase(Item):
     vendor, name, dose = None, None, None
     serial, manufacturer, amount = None, None, None
     year, month = None, None
+    price, unit_price = None, None
 
     def __repr__(self):
         return "<采购 商品={} 供应商={} 数量={}{}>".format(
@@ -155,6 +163,10 @@ class Sales(Item):
     client, name, dose = None, None, None
     manufacturer, amount, total_price = None, None, None
     serial, year, month = None, None, None
+
+    @property
+    def unit_price(self):
+        return float(self.total_price) / float(self.amount)
 
     def __repr__(self):
         return "<销售 商品={} 客户={} 数量={} 总金额={}{}>".format(
