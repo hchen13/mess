@@ -183,6 +183,8 @@ if __name__ == "__main__":
     total = len(missed_purchases)
     print('总共有{}条数据待处理'.format(total))
     for i, item in enumerate(missed_purchases):
+        item.normalize_product_info()
+        item.validate_data()
         for p in products:
             item.match_product(p)
         show_progress(i + 1, total)
