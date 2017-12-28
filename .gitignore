@@ -5,3 +5,5 @@ __pycache__
 .ipynb_checkpoints
 *.ipynb
 errors/
+采购导入/
+销售导入/

@@ -1,15 +1,14 @@
-import re
 import pickle
+import re
 import shutil
 from difflib import SequenceMatcher
+from operator import attrgetter
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Color, Side, NamedStyle
-from copy import copy
+from openpyxl.styles import Font, PatternFill, NamedStyle
 
+from models import SourceFile, Purchase, Sales, Product, show_progress
 from settings import *
-
-from models import SourceFile, Purchase, Sales, Product
 
 
 def file_exists(file_path):
@@ -25,6 +24,22 @@ def init():
         pass
     os.mkdir(ERROR_DIR)
     print("清理完成.\n")
+
+
+def clear_output_dirs():
+    print("清理所有导出表...")
+    try:
+        shutil.rmtree(PURCHASE_OUT_DIR)
+        shutil.rmtree(SALES_OUT_DIR)
+    except FileNotFoundError:
+        pass
+    years = ['2015', '2016', '2017']
+    os.mkdir(PURCHASE_OUT_DIR)
+    os.mkdir(SALES_OUT_DIR)
+    for y in years:
+        os.mkdir(os.path.join(PURCHASE_OUT_DIR, y))
+        os.mkdir(os.path.join(SALES_OUT_DIR, y))
+    print("清理完成\n")
 
 
 def save_data(data, file_name, silent=True):
@@ -64,7 +79,7 @@ def load_products(reload=False):
     return products
 
 
-def _preprocess_sheets():
+def preprocess_sheets():
 
     def dir_match(path):
         match = re.match(r'.*(?P<new>201\d)', path)
@@ -100,26 +115,6 @@ def _preprocess_sheets():
     return purchase_sheets, sales_sheets
 
 
-# def load_purchases(reload=False):
-#     print("正在读取采购数据...")
-#     if not file_exists(PURCHASE_FILE) or reload:
-#         purchase_list = _generate_ops_list(target='purchase')
-#     else:
-#         purchase_list = load_data(PURCHASE_FILE, silent=False)
-#     print("采购数据读取成功!\n")
-#     return purchase_list
-
-
-# def load_sales(reload=False):
-#     print("正在读取销售数据...")
-#     if not file_exists(SALES_FILE) or reload:
-#         sales_list = _generate_ops_list(target='sales')
-#     else:
-#         sales_list = load_data(SALES_FILE, silent=False)
-#     print("销售数据读取成功!\n")
-#     return sales_list
-
-
 def load_ops_list(target='both', reload=False):
     target_texts = {
         "purchase": "采购",
@@ -146,7 +141,7 @@ def load_ops_list(target='both', reload=False):
 
 
 def _generate_ops_list(target='both'):
-    p, s = _preprocess_sheets()
+    p, s = preprocess_sheets()
     purchase_list, sales_list = [], []
 
     if target == 'both' or target == 'purchase':
@@ -174,6 +169,110 @@ def _generate_ops_list(target='both'):
 
 def get_string_similarity(s1, s2):
     return SequenceMatcher(None, s1, s2).ratio()
+
+
+def write_purchase_sheet(vendor_name, year, data):
+    if not data:
+        return
+    wb = Workbook()
+    sheet = wb.active
+    headers = ["供应商名称", "商品编码", "品名", "规格", "厂家", "数量", '单价', '金额']
+    for col in range(len(headers)):
+        sheet.cell(row=1, column=col + 1, value=headers[col])
+    current_row = 2
+    for item in data:
+        values = [
+            item.vendor, item.serial,
+            item.name, item.dose, item.manufacturer,
+            item.amount, item.unit_price, item.price
+        ]
+        if not item.amount or not item.unit_price or not item.price:
+            print("时间{}, 第{}行, 信息: {}".format(item.time, item.row, item))
+        for i, val in enumerate(values):
+            sheet.cell(row=current_row, column=i + 1, value=val)
+        current_row += 1
+    path = os.path.join(PURCHASE_OUT_DIR, year, "{}.xlsx".format(vendor_name))
+    wb.save(path)
+
+
+def write_sales_sheet(client_name, year, data):
+    if not data:
+        return
+    wb = Workbook()
+    sheet = wb.active
+    headers = ["客户名称", "商品编码", "品名", "规格", "厂家", "数量", '单价', '金额']
+    for col in range(len(headers)):
+        sheet.cell(row=1, column=col + 1, value=headers[col])
+    current_row = 2
+    for item in data:
+        values = [
+            item.client, item.serial,
+            item.name, item.dose, item.manufacturer,
+            item.amount, item.unit_price, item.total_price
+        ]
+        for i, val in enumerate(values):
+            sheet.cell(row=current_row, column=i + 1, value=val)
+        current_row += 1
+    path = os.path.join(SALES_OUT_DIR, year, "{}.xlsx".format(client_name[:20]))
+    wb.save(path)
+
+
+def dump_purchases(vendor_name, purchases):
+    data_5, data_6, data_7 = [], [], []
+    for i, purchase in enumerate(purchases):
+        if purchase.year == '2015':
+            data_5.append(purchase)
+        elif purchase.year == '2016':
+            data_6.append(purchase)
+        else:
+            data_7.append(purchase)
+    write_purchase_sheet(vendor_name, '2015', data_5)
+    write_purchase_sheet(vendor_name, '2016', data_6)
+    write_purchase_sheet(vendor_name, '2017', data_7)
+
+
+def dump_sales(client_name, sales):
+    data_5, data_6, data_7 = [], [], []
+    for i, item in enumerate(sales):
+        if item.year == '2015':
+            data_5.append(item)
+        elif item.year == '2016':
+            data_6.append(item)
+        else:
+            data_7.append(item)
+    write_sales_sheet(client_name, '2015', data_5)
+    write_sales_sheet(client_name, '2016', data_6)
+    write_sales_sheet(client_name, '2017', data_7)
+
+
+def batch_purchases(purchase_list):
+    pl = sorted(purchase_list, key=attrgetter('vendor', 'time'))
+    current_vendor = pl[0].vendor
+    buff = [pl[0]]
+    show_progress(1, len(pl))
+    for i, purchase in enumerate(pl, start=1):
+        if purchase.vendor == current_vendor:
+            buff.append(purchase)
+        else:
+            dump_purchases(current_vendor, buff)
+            current_vendor = purchase.vendor
+            buff = [purchase]
+        show_progress(i + 1, len(pl))
+    dump_purchases(current_vendor, buff)
+
+
+def batch_sales(sales_list):
+    sl = sorted(sales_list, key=attrgetter('client', 'time'))
+    current_client = sl[0].client
+    buff = [sl[0]]
+    for i, sale in enumerate(sl, start=1):
+        if sale.client == current_client:
+            buff.append(sale)
+        else:
+            dump_sales(current_client, buff)
+            current_client = sale.client
+            buff = [sale]
+    dump_sales(current_client, buff)
 
 
 header_style = NamedStyle(

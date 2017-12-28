@@ -1,4 +1,3 @@
-from openpyxl import Workbook
 from models import show_progress
 from utils import *
 
@@ -127,20 +126,89 @@ def match_sales(auto_save=False):
     save_data(sales_list, SALES_FILE)
 
 
-def preprocess():
-    p, s = load_ops_list(reload=True)
+def preprocess(save=False):
+    p, s = load_ops_list(reload=False)
     for i in p:
         i.normalize_product_info()
+        i.validate_data()
     for i in s:
         i.normalize_product_info()
-    save_data(p, PURCHASE_FILE)
-    save_data(s, SALES_FILE)
+        i.validate_data()
+    if save:
+        save_data(p, PURCHASE_FILE)
+        save_data(s, SALES_FILE)
 
 
-if __name__ == "__main__":
+def match_serial_main():
     init()
     preprocess()
     match_purchases()
     match_sales()
     handle_matches()
     display_stats()
+
+
+def dump_sheet_main():
+    preprocess(save=True)
+    p, s = load_ops_list(target='sales', reload=False)
+    # p = list(filter(lambda x: x.has_serial(), p))
+    s = list(filter(lambda x: x.has_serial(), s))
+    # p = list(filter(lambda x: isinstance(x.vendor, str), p))
+    s = list(filter(lambda x: isinstance(x.client, str), s))
+    # clear_output_dirs()
+    # batch_purchases(p)
+    batch_sales(s)
+
+
+def test():
+    preprocess()
+    p, _ = load_ops_list(target='purchase')
+
+
+if __name__ == "__main__":
+    # match_serial_main()
+    # dump_sheet_main()
+    # display_stats()
+
+    p, s = preprocess_sheets()
+    missed_purchases, sales_list = [], []
+    for year, month, sheet in p:
+        sheet.set_time(year, month)
+        sheet.set_header(0)
+        sheet.extract_data(model_class=Purchase)
+        sheet.save_error()
+        missed_purchases += sheet.items
+
+    products = load_products()
+    total = len(missed_purchases)
+    print('总共有{}条数据待处理'.format(total))
+    for i, item in enumerate(missed_purchases):
+        for p in products:
+            item.match_product(p)
+        show_progress(i + 1, total)
+    save_data(missed_purchases, '遗漏采购数据.pickle')
+
+    count = 0
+    for item in missed_purchases:
+        if not item.has_serial():
+            count += 1
+    print(count)
+    # for year, month, sheet in s:
+    #     sheet.set_header(0)
+    #     sheet.set_time(year, month)
+    #     sheet.extract_data(model_class=Sales)
+    #     sheet.save_error()
+    #     sales_list += sheet.items
+    #
+    # purchase_sum = 0
+    # for i in purchase_list:
+    #     purchase_sum += float(i.price)
+    # sales_sum = 0
+    # for i in sales_list:
+    #     sales_sum += float(i.total_price)
+    #
+    # delta = sales_sum - purchase_sum
+    # rate = delta / sales_sum * 100
+    # print("采购总额: {:.2f}, 销售总额: {:.2f}".format(purchase_sum, sales_sum))
+    # print("差额共计{:.2f}, 占销售额的{:.2f}%".format(delta, rate))
+

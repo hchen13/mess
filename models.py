@@ -1,3 +1,4 @@
+import re
 import sys
 from difflib import SequenceMatcher
 
@@ -66,6 +67,18 @@ class Item:
         self.dose = str(self.dose).lower()
         self.manufacturer = str(self.manufacturer).lower()
 
+        try:
+            self.amount = float(self.amount)
+        except ValueError as e:
+            error_dict = {
+                "0.4g": 300,
+                "8粒": 100,
+                "新乡市亚太": 10,
+                "becton dickinson and": 2
+            }
+            self.amount = error_dict[self.amount]
+
+
     @property
     def get_product_info(self):
         return "{}{}{}".format(self.name, self.dose, self.manufacturer).lower()
@@ -131,8 +144,9 @@ class Purchase(Item):
         '生产企业': 'manufacturer',
         '数量': 'amount',
         '供货商': 'vendor',
-        '购进金额': 'price',
-        '购进单价': 'unit_price'
+        '购进金额': '_price',
+        '购进单价': 'unit_price',
+        '购进含税金额': '_price'
     }
     REVERSE_HEADERS = dict(zip(KEY_HEADERS.values(), KEY_HEADERS.keys()))
     VALIDATE_FIELDS = ['vendor', 'name', 'amount']
@@ -140,16 +154,31 @@ class Purchase(Item):
     vendor, name, dose = None, None, None
     serial, manufacturer, amount = None, None, None
     year, month = None, None
-    price, unit_price = None, None
+    _price, unit_price = None, None
 
     @property
     def time(self):
-        return "{}.{:02}".format(self.year, int(self.month))
+        result = "{}.{:02}".format(self.year, int(self.month))
+        return result
 
-def __repr__(self):
-        return "<采购 商品={} 供应商={} 数量={}{}>".format(
+    @property
+    def price(self):
+        if self._price is not None:
+            return self._price
+        return 0
+
+    def validate_data(self):
+        self.amount = float(self.amount)
+        self.unit_price = float(self.unit_price)
+
+        if not self._price:
+            self._price = self.amount * self.unit_price
+
+    def __repr__(self):
+        return "<采购 商品={} 供应商={} 单价={} 数量={}{}>".format(
             self.serial if self.serial else self.name,
             self.vendor,
+            self.unit_price,
             self.amount,
             " 时间={}.{}".format(self.year, self.month) if self.year else ""
         )
@@ -174,7 +203,21 @@ class Sales(Item):
 
     @property
     def unit_price(self):
-        return float(self.total_price) / float(self.amount)
+        try:
+            result = float(self.total_price) / float(self.amount)
+        except ValueError:
+            print(self)
+            result = ""
+        return result
+
+    def validate_data(self):
+        if not self.total_price:
+            self.total_price = self.amount * self.unit_price
+
+    @property
+    def time(self):
+        result = "{}.{:02}".format(self.year, int(self.month))
+        return result
 
     def __repr__(self):
         return "<销售 商品={} 客户={} 数量={} 总金额={}{}>".format(
@@ -191,6 +234,11 @@ class Sales(Item):
 
 class SourceFile:
     year, month = None, None
+
+    @property
+    def time(self):
+        result = "{}.{:02}".format(self.year, int(self.month))
+        return result
 
     def __init__(self, file_path):
         if not file_path.startswith(DATA_ROOT):
@@ -220,6 +268,9 @@ class SourceFile:
         self.year, self.month = year, month
 
     def extract_data(self, model_class):
+        if "购进金额" in self.header2idx:
+            self.items = []
+            return
         rows, cols = self.sheet.nrows, self.sheet.ncols
         print("开始读取文件数据, 共有 {} 行 {} 列".format(rows, cols))
         items = []
