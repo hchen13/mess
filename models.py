@@ -1,8 +1,6 @@
-import re
 import sys
 from difflib import SequenceMatcher
 
-import numpy as np
 import xlrd
 
 from settings import *
@@ -268,9 +266,6 @@ class SourceFile:
         self.year, self.month = year, month
 
     def extract_data(self, model_class):
-        if "购进金额" in self.header2idx:
-            self.items = []
-            return
         rows, cols = self.sheet.nrows, self.sheet.ncols
         print("开始读取文件数据, 共有 {} 行 {} 列".format(rows, cols))
         items = []

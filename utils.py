@@ -15,6 +15,9 @@ def file_exists(file_path):
     return os.path.exists(file_path)
 
 
+def is_excel(path):
+    return path.endswith('.xlsx')
+
 def init():
 
     print("清理所有错误日志...")
@@ -195,26 +198,34 @@ def write_purchase_sheet(vendor_name, year, data):
     wb.save(path)
 
 
-def write_sales_sheet(client_name, year, data):
-    if not data:
+def split(origin, size=20):
+    for i in range(0, len(origin), size):
+        yield origin[i : i + size]
+
+
+def write_sales_sheet(client_name, year, long_data):
+    if not long_data:
         return
-    wb = Workbook()
-    sheet = wb.active
-    headers = ["客户名称", "商品编码", "品名", "规格", "厂家", "数量", '单价', '金额']
-    for col in range(len(headers)):
-        sheet.cell(row=1, column=col + 1, value=headers[col])
-    current_row = 2
-    for item in data:
-        values = [
-            item.client, item.serial,
-            item.name, item.dose, item.manufacturer,
-            item.amount, item.unit_price, item.total_price
-        ]
-        for i, val in enumerate(values):
-            sheet.cell(row=current_row, column=i + 1, value=val)
-        current_row += 1
-    path = os.path.join(SALES_OUT_DIR, year, "{}.xlsx".format(client_name[:20]))
-    wb.save(path)
+    data_list = split(long_data, size=20)
+    for number, data in enumerate(data_list):
+        wb = Workbook()
+        sheet = wb.active
+        headers = ["客户名称", "商品编码", "品名", "规格", "厂家", "数量", '单价', '金额']
+        for col in range(len(headers)):
+            sheet.cell(row=1, column=col + 1, value=headers[col])
+        current_row = 2
+        for item in data:
+            values = [
+                item.client, item.serial,
+                item.name, item.dose, item.manufacturer,
+                item.amount, item.unit_price, item.total_price
+            ]
+            for i, val in enumerate(values):
+                sheet.cell(row=current_row, column=i + 1, value=val)
+            current_row += 1
+        file_name = "{}{}.xlsx".format(client_name[:20], "-{}".format(number) if number > 0 else "")
+        path = os.path.join(SALES_OUT_DIR, year, file_name)
+        wb.save(path)
 
 
 def dump_purchases(vendor_name, purchases):
@@ -261,7 +272,7 @@ def batch_purchases(purchase_list):
     dump_purchases(current_vendor, buff)
 
 
-def batch_sales(sales_list):
+def group_sales(sales_list):
     sl = sorted(sales_list, key=attrgetter('client', 'time'))
     current_client = sl[0].client
     buff = [sl[0]]
@@ -347,4 +358,4 @@ def write_match_errors(items, error_type, filename):
     book.save(path)
 
 if __name__ == '__main__':
-    pass
+    a = [1, 2, 3, 4, 5, 6, 7]

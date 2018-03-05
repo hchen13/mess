@@ -68,7 +68,7 @@ def match_purchases(auto_save=False):
     products = load_products()
     purchase_list, _ = load_ops_list(target='purchase')
 
-    print("开始对应采购商品系统编码...\n")
+    print("开始对应采购商品系统编码, 共{}项纪录...\n".format(len(purchase_list)))
     num_purchases = len(purchase_list)
     show_progress(0, num_purchases)
     for i, item in enumerate(purchase_list):
@@ -99,7 +99,7 @@ def match_sales(auto_save=False):
     products = load_products()
     _, sales_list = load_ops_list(target='sales')
 
-    print('开始对应销售商品系统编码...\n')
+    print('开始对应销售商品系统编码, 共{}项纪录...\n'.format(len(sales_list)))
     num_sales = len(sales_list)
     show_progress(0, num_sales)
     for i, item in enumerate(sales_list):
@@ -150,67 +150,33 @@ def match_serial_main():
 
 def dump_sheet_main():
     preprocess(save=True)
-    p, s = load_ops_list(target='sales', reload=False)
-    # p = list(filter(lambda x: x.has_serial(), p))
+    p, s = load_ops_list(target='both', reload=False)
+    p = list(filter(lambda x: x.has_serial(), p))
     s = list(filter(lambda x: x.has_serial(), s))
-    # p = list(filter(lambda x: isinstance(x.vendor, str), p))
+    s = list(filter(lambda x: float(x.total_price) >= 0, s))
+    p = list(filter(lambda x: isinstance(x.vendor, str), p))
     s = list(filter(lambda x: isinstance(x.client, str), s))
-    # clear_output_dirs()
-    # batch_purchases(p)
-    batch_sales(s)
+    clear_output_dirs()
+    batch_purchases(p)
+    group_sales(s)
 
 
 def test():
-    preprocess()
-    p, _ = load_ops_list(target='purchase')
+    products = load_products(reload=False)
+
+    plist, slist = load_ops_list('both', reload=True)
+    save_data(plist, PURCHASE_FILE)
+    save_data(slist, SALES_FILE)
+
+
+
+def divide_large_files(dir):
+    files = os.listdir(dir)
+    docs = list( filter( is_excel, files ) )
 
 
 if __name__ == "__main__":
-    # match_serial_main()
+    match_serial_main()
     # dump_sheet_main()
     # display_stats()
-
-    p, s = preprocess_sheets()
-    missed_purchases, sales_list = [], []
-    for year, month, sheet in p:
-        sheet.set_time(year, month)
-        sheet.set_header(0)
-        sheet.extract_data(model_class=Purchase)
-        sheet.save_error()
-        missed_purchases += sheet.items
-
-    products = load_products()
-    total = len(missed_purchases)
-    print('总共有{}条数据待处理'.format(total))
-    for i, item in enumerate(missed_purchases):
-        item.normalize_product_info()
-        item.validate_data()
-        for p in products:
-            item.match_product(p)
-        show_progress(i + 1, total)
-    save_data(missed_purchases, '遗漏采购数据.pickle')
-
-    count = 0
-    for item in missed_purchases:
-        if not item.has_serial():
-            count += 1
-    print(count)
-    # for year, month, sheet in s:
-    #     sheet.set_header(0)
-    #     sheet.set_time(year, month)
-    #     sheet.extract_data(model_class=Sales)
-    #     sheet.save_error()
-    #     sales_list += sheet.items
-    #
-    # purchase_sum = 0
-    # for i in purchase_list:
-    #     purchase_sum += float(i.price)
-    # sales_sum = 0
-    # for i in sales_list:
-    #     sales_sum += float(i.total_price)
-    #
-    # delta = sales_sum - purchase_sum
-    # rate = delta / sales_sum * 100
-    # print("采购总额: {:.2f}, 销售总额: {:.2f}".format(purchase_sum, sales_sum))
-    # print("差额共计{:.2f}, 占销售额的{:.2f}%".format(delta, rate))
-
+    # divide_large_files(SALES_OUT_DIR)
